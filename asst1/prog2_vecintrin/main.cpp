@@ -303,15 +303,26 @@ float arraySumSerial(float* values, int N) {
 // returns the sum of all elements in values
 // You can assume N is a multiple of VECTOR_WIDTH
 // You can assume VECTOR_WIDTH is a power of 2
-float arraySumVector(float* values, int N) {
-  
+float arraySumVector(float *values, int N)
+{
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of arraySumSerial here
-  //
-
+  // O(N / VECTOR_WIDHT + LOG(VECTOR_WIDTH))
+  __cs149_vec_float sumVec = _cs149_vset_float(0.0f);
+  __cs149_mask maskAll = _cs149_init_ones();
+  __cs149_mask maskFirstLane = _cs149_init_ones(1);
+  float sum = 0.0f;
   for (int i = 0; i < N; i += VECTOR_WIDTH)
   {
+    __cs149_vec_float vec;
+    _cs149_vload_float(vec, values + i, maskAll);
+    _cs149_vadd_float(sumVec, sumVec, vec, maskAll);
   }
-
-  return 0.0;
+  for (int i = 0; i < log(VECTOR_WIDTH); ++i)
+  {
+    _cs149_hadd_float(sumVec, sumVec);
+    _cs149_interleave_float(sumVec, sumVec);
+  }
+  _cs149_vstore_float(&sum, sumVec, maskFirstLane);
+  return sum;
 }
