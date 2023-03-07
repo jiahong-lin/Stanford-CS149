@@ -240,8 +240,8 @@ void clampedExpSerial(float* values, int* exponents, float* output, int N) {
   }
 }
 
-void clampedExpVector(float* values, int* exponents, float* output, int N) {
-
+void clampedExpVector(float *values, int *exponents, float *output, int N)
+{
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of
   // clampedExpSerial() here.
@@ -249,7 +249,45 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
   // Your solution should work for any value of
   // N and VECTOR_WIDTH, not just when VECTOR_WIDTH divides N
   //
-  
+  __cs149_vec_int exp, zero = _cs149_vset_int(0), one = _cs149_vset_int(1);
+  __cs149_vec_float val, result, clamp;
+  __cs149_mask maskAll, maskZeroExp, maskNonZeroExp, maskClamp;
+  int remainder = N % VECTOR_WIDTH;
+  for (int i = 0; i < N; i += VECTOR_WIDTH)
+  {
+    if (i >= N / VECTOR_WIDTH * VECTOR_WIDTH) // partial vector
+    {
+      maskAll = _cs149_init_ones(remainder);
+    }
+    else
+    {
+      maskAll = _cs149_init_ones();
+    }
+
+    maskZeroExp = _cs149_init_ones(0);
+
+    _cs149_vload_int(exp, exponents + i, maskAll);
+    _cs149_vload_float(val, values + i, maskAll);
+    _cs149_vset_float(result, 1.0, maskAll); // result[i] = 1.0
+
+    _cs149_veq_int(maskZeroExp, exp, zero, maskAll);
+    maskNonZeroExp = _cs149_mask_not(maskZeroExp);
+    maskNonZeroExp = _cs149_mask_and(maskNonZeroExp, maskAll);
+
+    while (_cs149_cntbits(maskNonZeroExp))
+    {
+      _cs149_vmult_float(result, result, val, maskNonZeroExp); // result[i] *= values[i]
+      _cs149_vsub_int(exp, exp, one, maskNonZeroExp);          // exponents[i]--
+      _cs149_veq_int(maskZeroExp, exp, zero, maskAll);         // check if exponents[i] == 0
+      maskNonZeroExp = _cs149_mask_not(maskZeroExp);           // update maskNonZeroExp
+      maskNonZeroExp = _cs149_mask_and(maskNonZeroExp, maskAll);
+    }
+
+    _cs149_vset_float(clamp, 9.999999f, maskAll);
+    _cs149_vgt_float(maskClamp, result, clamp, maskAll); // if result[i] > 9.999999f
+    _cs149_vset_float(result, 9.999999f, maskClamp);     // result[i] = 9.999999f
+    _cs149_vstore_float(output + i, result, maskAll);
+  }
 }
 
 // returns the sum of all elements in values
@@ -270,11 +308,10 @@ float arraySumVector(float* values, int N) {
   //
   // CS149 STUDENTS TODO: Implement your vectorized version of arraySumSerial here
   //
-  
-  for (int i=0; i<N; i+=VECTOR_WIDTH) {
 
+  for (int i = 0; i < N; i += VECTOR_WIDTH)
+  {
   }
 
   return 0.0;
 }
-
